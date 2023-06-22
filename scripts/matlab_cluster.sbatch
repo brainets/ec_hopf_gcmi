@@ -6,7 +6,7 @@
 #SBATCH --cpus-per-task=2
 #SBATCH --output=jobid-%A_%a.out
 #SBATCH --error=jobid-%A_%a.err
-#SBATCH --array=1-3
+#SBATCH --array=1-2
 
 #Load Matlab 2017a module
 
