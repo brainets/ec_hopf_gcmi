@@ -6,7 +6,9 @@
 % reaction=1;  % 1:3 fast, middle, slow
 
 
-function eff_hopf_gcmi(reaction, condition)
+function eff_hopf_gcmi(simulation, reaction, condition)
+
+rng shuffle; % necessary to generate random numbers in the cluster
 
 addpath('../data');
 
@@ -23,7 +25,7 @@ C = C/max(max(C))*0.2;       % scale structural connectivity (DTI) to a maximum 
 
 FCemp = FC;
 nmask=~isnan(FCemp);         % mask of NaNs
-NSIM=100;                    % total simulations
+NSIM=1;                    % total simulations
 
 % Parameters of the data
 TR=1;                         % Repetition Time (seconds)
@@ -43,20 +45,21 @@ k=2;                          % 2nd order butterworth filter
 a=-0.02*ones(N,2);
 omega = repmat(2*pi*f_diff',1,2); omega(:,1) = -omega(:,1);
 dt=0.1*TR/2;
-sig=0.02;
+sig=0.01;
 dsig = sqrt(dt)*sig;
 Tmax = 10000;
 
 %%%%%%%%%%%%
 %% Optimize
 %%
-GCsim2=zeros(NSIM,N,N); % simulated Gaussian-Copula Mutual Information 
+GCsim2=zeros(NSIM,N,N); % simulated Gaussian-Copula Mutual Information
 Cnew=C;                 % effective connectivity matrix updated in each iteration
-for iter=1:100
+for iter=1:500
     iter
     wC = Cnew; % updated in each iteration
     sumC = repmat(sum(wC,2),1,2); % for sum Cij*xj
     for sub=1:NSIM
+        sub
         xs=zeros(Tmax,N);
         z = 0.1*ones(N,2); % --> x = z(:,1), y = z(:,2)
         nn=0;
@@ -66,7 +69,7 @@ for iter=1:100
             zz = z(:,end:-1:1); % flipped z, because (x.*x + y.*y)
             z = z + dt*(a.*z + zz.*omega - z.*(z.*z+zz.*zz) + suma) + dsig*randn(N,2);
         end
-        % actual modeling (x=simulated_signal (Interpretation), y some other oscillation)
+        % actual modeling (x=BOLD signal (Interpretation), y some other oscillation)
         for t=0:dt:((Tmax-1)*TR)
             suma = wC*z - sumC.*z; % sum(Cij*xi) - sum(Cij)*xj
             zz = z(:,end:-1:1); % flipped z, because (x.*x + y.*y)
@@ -97,25 +100,26 @@ for iter=1:100
         end
     end
     
-    fcsimul=squeeze(mean(GCsim2));
+    fcsimul=squeeze(mean(GCsim2,1));
     fcsimuli(iter,:,:)= fcsimul - diag(diag(fcsimul)); % diagonal values to zero
     fittFC(iter)=sqrt(nanmean((FCemp(Isubdiag)-fcsimul(Isubdiag)).^2)); %fitting
     
     
-    corr2FCSC(iter)=corr2(fcsimul(Isubdiag),C(Isubdiag)); 
+    corr2FCSC(iter)=corr2(fcsimul(Isubdiag),C(Isubdiag));
     fc=FCemp(Isubdiag);
     idx=find(isnan(fc));
     fc(idx)=[];
     fcsimdia=fcsimul(Isubdiag);
     fcsimdia(idx)=[];
     corr2FCemp_sim(iter)=corr2(fcsimdia,fc);
+
     
     % effective connectivity
     for i=1:N
         for j=1:N
             if(nmask(i,j))
                 if (C(i,j)>0 || j==N/2+i)
-                    Cnew(i,j)=Cnew(i,j)+0.05*(FCemp(i,j)-fcsimul(i,j));
+                    Cnew(i,j)=Cnew(i,j)+0.005*(FCemp(i,j)-fcsimul(i,j));
                     if (Cnew(i,j)<0 || isnan(Cnew(i,j)))
                         Cnew(i,j)=0;
                     end
@@ -124,11 +128,9 @@ for iter=1:100
         end
     end
     
-    Cnew= Cnew/max(max(Cnew))*0.2; % scale effective connectivity to a maximum value of 0.2
-    iEffectiveConnectivity(iter,:,:) = Cnew;
-    
+    Cnew= Cnew/max(max(Cnew))*0.2; % scale effective connectivity to a maximum value of 0.2    
 end
 
-save (sprintf('results_eff_hopf_GC_%s_%s.mat', num2str(condition),num2str(reaction)),'fcsimuli','FCemp', ...
-    'corr2FCSC','corr2FCemp_sim','fittFC','iEffectiveConnectivity');
+save (sprintf('results_eff_hopf_GCMI_%s_%s_%s.mat', num2str(condition),num2str(reaction), num2str(simulation)),'fcsimul','fcsimuli','FCemp', ...
+    'corr2FCSC','corr2FCemp_sim','fittFC','Cnew');
 end
