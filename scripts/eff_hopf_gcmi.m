@@ -69,7 +69,7 @@ for iter=1:500
             zz = z(:,end:-1:1); % flipped z, because (x.*x + y.*y)
             z = z + dt*(a.*z + zz.*omega - z.*(z.*z+zz.*zz) + suma) + dsig*randn(N,2);
         end
-        % actual modeling (x=BOLD signal (Interpretation), y some other oscillation)
+        % actual modeling (x=simulated signal (Interpretation), y some other oscillation)
         for t=0:dt:((Tmax-1)*TR)
             suma = wC*z - sumC.*z; % sum(Cij*xi) - sum(Cij)*xj
             zz = z(:,end:-1:1); % flipped z, because (x.*x + y.*y)
