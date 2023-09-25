@@ -1,4 +1,4 @@
-# Effective Connectivity estiate based on Hopf model
+# Effective Connectivity estimate based on Hopf model
 
 Hopf model inversion based on SEEG empirical data during task conditions
 
